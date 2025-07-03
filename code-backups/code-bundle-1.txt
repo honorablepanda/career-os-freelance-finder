@@ -1,0 +1,397 @@
+File name: backupProjectCode.js
+
+Code:
+// backupProjectCode.js
+const fs = require("fs");
+const path = require("path");
+
+const OUTPUT_FOLDER = "code-backups";
+const MAX_CHARACTERS_PER_FILE = 500000; // ~500KB target size per file
+
+const ALLOWED_EXTENSIONS = [".js", ".jsx", ".json", ".html", ".css", ".ts", ".tsx", ".txt", ".md"];
+
+let bundles = [];
+let currentBundle = "";
+let bundleIndex = 1;
+
+function collectFiles(dir) {
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+
+  items.forEach((item) => {
+    const fullPath = path.join(dir, item.name);
+
+    if (item.isDirectory()) {
+      collectFiles(fullPath);
+    } else {
+      const ext = path.extname(item.name).toLowerCase();
+      if (ALLOWED_EXTENSIONS.includes(ext)) {
+        const code = fs.readFileSync(fullPath, "utf8");
+
+        const entry = `File name: ${path.relative(".", fullPath)}\n\nCode:\n${code}\n\n---\n\n`;
+
+        if (currentBundle.length + entry.length > MAX_CHARACTERS_PER_FILE) {
+          bundles.push(currentBundle);
+          currentBundle = "";
+        }
+
+        currentBundle += entry;
+      }
+    }
+  });
+}
+
+function writeBundles() {
+  if (currentBundle) bundles.push(currentBundle);
+  fs.mkdirSync(OUTPUT_FOLDER, { recursive: true });
+
+  bundles.forEach((content, i) => {
+    const filePath = path.join(OUTPUT_FOLDER, `code-bundle-${i + 1}.txt`);
+    fs.writeFileSync(filePath, content, "utf8");
+    console.log(`✅ Saved ${filePath}`);
+  });
+}
+
+console.log("📦 Backing up project code files...");
+collectFiles(".");
+writeBundles();
+console.log("✅ Done. Code backups saved in:", OUTPUT_FOLDER);
+
+
+---
+
+File name: backupProjectStructure.js
+
+Code:
+// backupProjectStructure.js
+const fs = require("fs");
+const path = require("path");
+
+const OUTPUT_FOLDER = "structure-backups";
+const MAX_LINES_PER_FILE = 4000; // Adjust if needed for ChatGPT
+
+const outputLines = [];
+
+function walk(dir, prefix = "") {
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+  items.forEach((item, idx) => {
+    const isLast = idx === items.length - 1;
+    const connector = isLast ? "└── " : "├── ";
+    outputLines.push(`${prefix}${connector}${item.name}`);
+
+    if (item.isDirectory()) {
+      walk(path.join(dir, item.name), prefix + (isLast ? "    " : "│   "));
+    }
+  });
+}
+
+function writeChunks() {
+  fs.mkdirSync(OUTPUT_FOLDER, { recursive: true });
+
+  let part = 1;
+  for (let i = 0; i < outputLines.length; i += MAX_LINES_PER_FILE) {
+    const chunk = outputLines.slice(i, i + MAX_LINES_PER_FILE).join("\n");
+    const filePath = path.join(OUTPUT_FOLDER, `project-structure-part${part}.txt`);
+    fs.writeFileSync(filePath, chunk, "utf8");
+    console.log(`✅ Saved ${filePath}`);
+    part++;
+  }
+}
+
+console.log("📂 Backing up project folder structure...");
+walk(".");
+writeChunks();
+console.log("✅ Done. Structure backups saved in:", OUTPUT_FOLDER);
+
+
+---
+
+File name: Commands to run backup scripts.txt
+
+Code:
+node backupProjectStructure.js
+node backupProjectCode.js
+
+
+---
+
+File name: components\GigSearch.jsx
+
+Code:
+import React, { useState, useEffect } from "react";
+import { useFreelanceFinder } from "../hooks/useFreelanceFinder";
+
+export default function GigSearch() {
+  const { gigs, searchGigs } = useFreelanceFinder();
+  const [query, setQuery] = useState("");
+  const [filtered, setFiltered] = useState(gigs);
+
+  useEffect(() => {
+    setFiltered(searchGigs(query));
+  }, [query, gigs, searchGigs]);
+
+  return (
+    <div className="p-4 border rounded bg-gray-50" role="region" aria-labelledby="gig-search-title">
+      <h2 id="gig-search-title" className="font-semibold mb-2">Search Gigs</h2>
+      <input
+        type="search"
+        placeholder="Search by skill, keyword, or company"
+        className="border p-2 rounded w-full mb-3"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search gigs"
+      />
+      <ul className="max-h-60 overflow-auto text-sm space-y-2" tabIndex={0}>
+        {filtered.length === 0 && <li>No gigs found.</li>}
+        {filtered.map((gig) => (
+          <li key={gig.id} className="border-b pb-2">
+            <div>
+              <strong>{gig.title}</strong> — {gig.company}
+            </div>
+            <div className="text-gray-600 text-xs">Skills: {gig.skills.join(", ")}</div>
+            <div className="text-gray-600 text-xs">Pay: ${gig.pay}</div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+
+---
+
+File name: components\GigSuggestion.jsx
+
+Code:
+import React, { useState } from "react";
+import { useFreelanceFinder } from "../hooks/useFreelanceFinder";
+
+export default function GigSuggestion() {
+  const { suggestGigs, loading } = useFreelanceFinder();
+  const [suggestions, setSuggestions] = useState([]);
+
+  const handleSuggest = async () => {
+    const results = await suggestGigs();
+    setSuggestions(results);
+  };
+
+  return (
+    <div className="p-4 border rounded bg-blue-50" role="region" aria-labelledby="gig-suggestion-title">
+      <h2 id="gig-suggestion-title" className="font-semibold mb-2">AI Gig Suggestions</h2>
+      <button
+        onClick={handleSuggest}
+        disabled={loading}
+        className="bg-blue-700 text-white px-3 py-1 rounded"
+      >
+        {loading ? "Loading..." : "Suggest Gigs"}
+      </button>
+      <ul className="mt-3 list-disc list-inside text-sm max-h-48 overflow-auto">
+        {suggestions.map((gig, i) => (
+          <li key={i}>{gig}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+
+---
+
+File name: components\SavedGigs.jsx
+
+Code:
+import React, { useState, useEffect } from "react";
+import { useFreelanceFinder } from "../hooks/useFreelanceFinder";
+
+export default function SavedGigs() {
+  const { savedGigs, removeSavedGig } = useFreelanceFinder();
+  const [localSaved, setLocalSaved] = useState([]);
+
+  useEffect(() => {
+    setLocalSaved(savedGigs);
+  }, [savedGigs]);
+
+  return (
+    <div className="p-4 border rounded bg-yellow-50" role="region" aria-labelledby="saved-gigs-title">
+      <h2 id="saved-gigs-title" className="font-semibold mb-2">Saved Gigs</h2>
+      {localSaved.length === 0 ? (
+        <div className="text-sm text-gray-600">You have no saved gigs.</div>
+      ) : (
+        <ul className="space-y-2 text-sm max-h-48 overflow-auto" tabIndex={0}>
+          {localSaved.map((gig) => (
+            <li key={gig.id} className="border-b pb-2 flex justify-between items-center">
+              <div>
+                <strong>{gig.title}</strong> — {gig.company}
+              </div>
+              <button
+                onClick={() => removeSavedGig(gig.id)}
+                className="text-red-600 hover:underline"
+                aria-label={`Remove saved gig ${gig.title}`}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
+---
+
+File name: hooks\useFreelanceFinder.js
+
+Code:
+import { useState, useCallback } from "react";
+import { mockGigs, mockSavedGigs } from "../mock/mockFreelanceData";
+
+/**
+ * Hook managing freelance gigs data, saved gigs, and dummy AI suggestions.
+ */
+export const useFreelanceFinder = () => {
+  const [gigs, setGigs] = useState(mockGigs);
+  const [savedGigs, setSavedGigs] = useState(mockSavedGigs);
+  const [loading, setLoading] = useState(false);
+
+  /**
+   * Filters gigs by keyword in title, company, or skills.
+   * @param {string} query
+   * @returns {Array} filtered gigs
+   */
+  const searchGigs = useCallback(
+    (query) => {
+      if (!query.trim()) return gigs;
+      const lowerQuery = query.toLowerCase();
+      return gigs.filter(
+        (g) =>
+          g.title.toLowerCase().includes(lowerQuery) ||
+          g.company.toLowerCase().includes(lowerQuery) ||
+          g.skills.some((s) => s.toLowerCase().includes(lowerQuery))
+      );
+    },
+    [gigs]
+  );
+
+  /**
+   * Removes a gig from saved gigs list.
+   * @param {string} id
+   */
+  const removeSavedGig = useCallback(
+    (id) => {
+      setSavedGigs((prev) => prev.filter((g) => g.id !== id));
+    },
+    []
+  );
+
+  /**
+   * Dummy AI gig suggestions.
+   */
+  const suggestGigs = useCallback(async () => {
+    setLoading(true);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        setLoading(false);
+        resolve([
+          "Build responsive React websites for startups",
+          "Create engaging social media content for small businesses",
+          "Develop automation scripts using Python",
+          "Design logos and branding materials for local shops",
+        ]);
+      }, 1500);
+    });
+  }, []);
+
+  return { gigs, savedGigs, searchGigs, removeSavedGig, suggestGigs, loading };
+};
+
+
+---
+
+File name: index.jsx
+
+Code:
+import React from "react";
+import GigSearch from "./components/GigSearch";
+import SavedGigs from "./components/SavedGigs";
+import GigSuggestion from "./components/GigSuggestion";
+
+export default function FreelanceFinder() {
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl font-bold mb-4">💼 Freelance & Side Gig Finder</h1>
+      <GigSearch />
+      <SavedGigs />
+      <GigSuggestion />
+    </div>
+  );
+}
+s
+
+---
+
+File name: mock\mockFreelanceData.js
+
+Code:
+export const mockGigs = [
+  {
+    id: "g1",
+    title: "React Developer for E-commerce Site",
+    company: "ShopSmart",
+    skills: ["React", "JavaScript", "CSS"],
+    pay: 5000,
+  },
+  {
+    id: "g2",
+    title: "Social Media Content Creator",
+    company: "BrandBuzz",
+    skills: ["Content Creation", "Photoshop", "SEO"],
+    pay: 3000,
+  },
+  {
+    id: "g3",
+    title: "Python Automation Scripts",
+    company: "AutoWorks",
+    skills: ["Python", "Scripting", "Automation"],
+    pay: 4000,
+  },
+  {
+    id: "g4",
+    title: "Graphic Designer for Startup",
+    company: "CreativeCo",
+    skills: ["Adobe Illustrator", "Logo Design", "Branding"],
+    pay: 3500,
+  },
+];
+
+export const mockSavedGigs = [
+  {
+    id: "g2",
+    title: "Social Media Content Creator",
+    company: "BrandBuzz",
+    skills: ["Content Creation", "Photoshop", "SEO"],
+    pay: 3000,
+  },
+];
+
+
+---
+
+File name: structure-backups\project-structure-part1.txt
+
+Code:
+├── backupProjectCode.js
+├── backupProjectStructure.js
+├── Commands to run backup scripts.txt
+├── components
+│   ├── GigSearch.jsx
+│   ├── GigSuggestion.jsx
+│   └── SavedGigs.jsx
+├── hooks
+│   └── useFreelanceFinder.js
+├── index.jsx
+└── mock
+    └── mockFreelanceData.js
+
+---
+

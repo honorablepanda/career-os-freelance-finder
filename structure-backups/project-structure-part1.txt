@@ -1,0 +1,12 @@
+├── backupProjectCode.js
+├── backupProjectStructure.js
+├── Commands to run backup scripts.txt
+├── components
+│   ├── GigSearch.jsx
+│   ├── GigSuggestion.jsx
+│   └── SavedGigs.jsx
+├── hooks
+│   └── useFreelanceFinder.js
+├── index.jsx
+└── mock
+    └── mockFreelanceData.js
