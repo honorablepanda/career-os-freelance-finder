@@ -1,19 +1,11 @@
 import { useState, useCallback } from "react";
 import { mockGigs, mockSavedGigs } from "../mock/mockFreelanceData";
 
-/**
- * Hook managing freelance gigs data, saved gigs, and dummy AI suggestions.
- */
 export const useFreelanceFinder = () => {
   const [gigs, setGigs] = useState(mockGigs);
   const [savedGigs, setSavedGigs] = useState(mockSavedGigs);
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Filters gigs by keyword in title, company, or skills.
-   * @param {string} query
-   * @returns {Array} filtered gigs
-   */
   const searchGigs = useCallback(
     (query) => {
       if (!query.trim()) return gigs;
@@ -28,10 +20,6 @@ export const useFreelanceFinder = () => {
     [gigs]
   );
 
-  /**
-   * Removes a gig from saved gigs list.
-   * @param {string} id
-   */
   const removeSavedGig = useCallback(
     (id) => {
       setSavedGigs((prev) => prev.filter((g) => g.id !== id));
@@ -39,9 +27,6 @@ export const useFreelanceFinder = () => {
     []
   );
 
-  /**
-   * Dummy AI gig suggestions.
-   */
   const suggestGigs = useCallback(async () => {
     setLoading(true);
     return new Promise((resolve) => {
